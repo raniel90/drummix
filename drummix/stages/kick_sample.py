@@ -47,9 +47,15 @@ def synth_kick(tonic_hz: float, sweep_from_hz: float = 160.0, decay_s: float = 0
 
 
 def kick_sample(kick: np.ndarray, tonic_hz: float, reference_db: float, level_db: float = -9.0,
-                align_window_ms: tuple[float, float] = (-3.0, 12.0), **synth) -> tuple[np.ndarray, list[Hit]]:
-    """Sample track (same length as `kick`) at `level_db` relative to `reference_db` RMS, plus hits."""
-    starts, peaks = detect_kicks(kick)
+                align_window_ms: tuple[float, float] = (-3.0, 12.0), detect_on: np.ndarray | None = None,
+                **synth) -> tuple[np.ndarray, list[Hit]]:
+    """Sample track (same length as `kick`) at `level_db` relative to `reference_db` RMS, plus hits.
+
+    Hits (and their velocities) are detected on `detect_on` when given — the raw stem: the
+    cleanup compressor retriggers the flux detector ~13 dB below the real hits — while the
+    sample is fine-aligned against `kick`, the stem it will actually sit under.
+    """
+    starts, peaks = detect_kicks(kick if detect_on is None else detect_on)
     low = _low(kick)
     sample = synth_kick(tonic_hz, **synth)
     n, L = len(sample), int(0.03 * SR)

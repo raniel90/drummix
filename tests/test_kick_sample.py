@@ -51,3 +51,26 @@ def test_sample_is_in_phase_with_real_kick(tmp_path):
     lags = range(-int(0.004 * SR), int(0.004 * SR) + 1, 8)
     corr = [np.dot(a[max(0, l):len(a) + min(0, l)], b[max(0, -l):len(b) + min(0, -l)]) for l in lags]
     assert abs(list(lags)[int(np.argmax(corr))]) <= int(0.001 * SR)
+
+
+def _with_retriggers(kick, truth):
+    # "limpo" = cru + golpes fantasmas ~13 dB abaixo, no meio entre golpes reais
+    # (o compressor da limpeza redisparava assim na música real: 597 detecções contra 544)
+    bump = synth_kick(55.0) * np.max(np.abs(kick)) * 10 ** (-13 / 20)
+    out = kick.copy()
+    t = np.sort(truth)
+    for a, b in zip(t, t[1:]):
+        i = int((a + b) / 2 * SR)
+        if i + len(bump) <= len(out):
+            out[i:i + len(bump)] += bump[:, None]
+    return out
+
+
+def test_detect_on_raw_ignores_retriggers_of_cleaned_kick(tmp_path):
+    kick, truth = _kick_stem(tmp_path)
+    cleaned = _with_retriggers(kick, truth)
+    assert len(detect_kicks(cleaned)[0]) > len(truth)  # o cenário realmente engana o detector
+    sample, hits = kick_sample(cleaned, tonic_hz=55.0, reference_db=rms_db(cleaned), level_db=-9.0, detect_on=kick)
+    assert len(hits) == len(truth)
+    assert sample.shape == cleaned.shape
+    assert np.max(np.abs(np.array([h.time_s for h in hits]) - np.sort(truth))) < 0.002
