@@ -26,7 +26,8 @@ def _kick(rng):
 
 def _noise(rng, n, lo, hi, tau):
     sos = butter(2, [lo, hi], "band", fs=SR, output="sos")
-    return sosfilt(sos, rng.standard_normal(n)) * _decay(n, tau)
+    burst = sosfilt(sos, rng.standard_normal(n)) * _decay(n, tau)
+    return burst / np.max(np.abs(burst))  # unit peak, so `amp` is the hit's real peak level
 
 
 def _place(track, sound, t_s, amp):
@@ -99,10 +100,15 @@ def make_song(folder, seconds=20.0, delay_s=1.5, bpm=120, seed=0) -> dict:
     pieces["other"] += 1e-6 * rng.standard_normal(n)
     pieces["other_kit"] += 1e-4 * rng.standard_normal(n)
 
+    # one common scale for every file keeps original - band == reference drums, without clipping
+    ref_drums = sum(ref.values())
+    scale = min(1.0, 0.9 / max(np.max(np.abs(band + ref_drums)), np.max(np.abs(sum(pieces.values())))))
+    pieces = {k: v * scale for k, v in pieces.items()}
+    band, ref_drums = band * scale, ref_drums * scale
+
     stems_dir = folder / "stems"
     for piece, x in pieces.items():
         audio.save(stems_dir / f"Synth - Audio-{_NAMES[piece]}-A minor-{bpm}bpm-440hz.wav", np.stack([x, x], 1))
-    ref_drums = sum(ref.values())
     audio.save(folder / "band.wav", np.stack([band, band], 1))
     audio.save(folder / "original.wav", np.stack([band + ref_drums, band + ref_drums], 1))
     return {"stems_dir": stems_dir, "band": folder / "band.wav", "original": folder / "original.wav",

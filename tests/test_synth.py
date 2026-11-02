@@ -15,3 +15,10 @@ def test_make_song_writes_moises_layout(tmp_path):
     assert len(info["kick_times"]) > 10
     kick = audio.load(stems["kick"])
     assert np.max(np.abs(kick)) > 0.1
+
+
+def test_synthetic_audio_never_clips(tmp_path):
+    info = make_song(tmp_path, seconds=30.0, delay_s=1.5)
+    stems, _, _ = song.find_stems(info["stems_dir"])
+    for path in [*stems.values(), info["band"], info["original"]]:
+        assert np.max(np.abs(audio.load(path))) < 0.99, path.name
