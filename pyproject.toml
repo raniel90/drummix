@@ -2,6 +2,8 @@
 name = "drummix"
 version = "0.1.0"
 description = "Mixagem reprodutível de covers de bateria (EAD10 + stems Moises)"
+readme = "README.md"
+license = "GPL-3.0-or-later"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "numpy>=2.1",
