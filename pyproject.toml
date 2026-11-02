@@ -1,0 +1,30 @@
+[project]
+name = "drummix"
+version = "0.1.0"
+description = "Mixagem reprodutível de covers de bateria (EAD10 + stems Moises)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "numpy>=2.1",
+    "scipy>=1.14",
+    "soundfile>=0.13",
+    "pyloudnorm>=0.2",
+    "pyebur128>=0.1.1",
+    "pedalboard>=0.9.26",
+    "pretty_midi>=0.2.11",
+    "pyyaml>=6",
+]
+
+[project.scripts]
+drummix = "drummix.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["regression: usa áudio real de ~/Downloads (lento)"]
+addopts = "-m 'not regression'"
