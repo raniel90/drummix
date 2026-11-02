@@ -73,3 +73,9 @@ def test_sha1_changes_with_content(tmp_path):
     (tmp_path / "a").write_bytes(b"x")
     (tmp_path / "b").write_bytes(b"y")
     assert audio.sha1(tmp_path / "a") != audio.sha1(tmp_path / "b")
+
+
+def test_lufs_rejects_signal_shorter_than_400ms():
+    with pytest.raises(audio.AudioError, match="400 ms"):
+        audio.lufs(_tone(seconds=0.3))
+    assert np.isfinite(audio.lufs(_tone(seconds=0.4)))

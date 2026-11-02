@@ -54,7 +54,11 @@ def save(path, x: np.ndarray, subtype: str = "PCM_24") -> None:
 
 
 def lufs(x: np.ndarray) -> float:
-    return float(pyln.Meter(SR).integrated_loudness(_stereo(x)))
+    """Integrated loudness (BS.1770). Silence gives -inf; callers check isfinite."""
+    x = _stereo(x)
+    if len(x) < int(0.4 * SR):
+        raise AudioError("sinal curto demais para LUFS (< 400 ms)")
+    return float(pyln.Meter(SR).integrated_loudness(x))
 
 
 def true_peak_db(x: np.ndarray) -> float:
