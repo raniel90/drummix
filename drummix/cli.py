@@ -3,11 +3,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
+from drummix.audio import AudioError
+from drummix.deliver import DeliveryError
 from drummix.ingest import create_song
 from drummix.pipeline import render
-from drummix.song import load_song
+from drummix.song import PROFILES_DIR, load_song
+from drummix.stages.align import AlignError
+from drummix.stages.master import MasterError
+
+SONGS_DIR = Path(__file__).resolve().parent.parent / "songs"
+# what the user can get wrong (inputs, files, a render that can't meet its targets); anything else is a bug
+_EXPECTED = (AudioError, AlignError, MasterError, DeliveryError, ValueError, FileNotFoundError, FileExistsError)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -19,13 +28,20 @@ def main(argv: list[str] | None = None) -> int:
     new.add_argument("--band", required=True, type=Path, help="faixa sem bateria")
     new.add_argument("--original", required=True, type=Path, help="música original (referência)")
     new.add_argument("--take", type=Path, help="take bruto / vídeo do Rec'n'Share (opcional)")
-    new.add_argument("--style", default="fusion")
-    new.add_argument("--songs-dir", type=Path, default=Path("songs"))
+    new.add_argument("--style", default="fusion", choices=sorted(p.stem for p in PROFILES_DIR.glob("*.yaml")))
+    new.add_argument("--songs-dir", type=Path, default=SONGS_DIR)
     ren = sub.add_parser("render", help="gera output/vN")
     ren.add_argument("slug")
-    ren.add_argument("--songs-dir", type=Path, default=Path("songs"))
+    ren.add_argument("--songs-dir", type=Path, default=SONGS_DIR)
     args = ap.parse_args(argv)
+    try:
+        return _run(args)
+    except _EXPECTED as e:
+        print(f"erro: {e}", file=sys.stderr)
+        return 1
 
+
+def _run(args) -> int:
     if args.cmd == "new":
         root = create_song(args.songs_dir, args.slug, args.stems, args.band, args.original, args.style, args.take)
         print(f"criado {root}")
