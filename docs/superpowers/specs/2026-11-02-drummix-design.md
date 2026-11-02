@@ -121,7 +121,11 @@ Sinais sintéticos com pytest:
 - mux de vídeo preserva sincronia.
 - E2E curto: música sintética de 20 s passa pelo pipeline completo.
 
+**Regressão com material real — `songs/the-hornet`** (fontes em `~/Downloads`, copiadas pelo `drummix new`):
+- Entradas: pasta `The Hornet - Audio-A minor-131bpm-441hz/` (7 stems), `The Hornet - Sem bateria.wav`, `The Hornet - Original.wav`, `The Hornet - Audio.m4a` (take bruto).
+- Baseline: `The Hornet - Mix Cover/The Hornet - Cover Final.wav` (sha1 `9c8a284fb5ee…`, −13,9 LUFS, −1,2 dBTP) — a versão aprovada de ouvido na sessão manual; entra no `compare.html` como "manual".
+- Critérios: atraso da banda 11,73 ± 0,03 s; ~544 golpes de bumbo (±10%); final −14 ± 0,3 LUFS, TP ≤ −1 dBTP; bateria −2 ± 0,5 LU vs banda; aprovação final de ouvido no A/B contra o baseline.
+
 ## 10. Questões em aberto
 
-- Arquivos de The Hornet (stems, sem bateria, original) para teste de regressão: a pasta de Downloads foi removida; se o usuário ainda tiver, viram o primeiro `songs/the-hornet`.
 - Pack de samples para rock: escolher no primeiro cover de rock (Salamander, DrumGizmo ou SM MegaReaper), com licença verificada antes de entrar no git.
