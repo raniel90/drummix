@@ -18,6 +18,7 @@ _STEM_RE = re.compile(
     r"-(?P<key>[A-G][#b]? (?:major|minor))-(?P<bpm>\d+)bpm-\d+hz\.wav$")
 _NOTE = {"C": 0, "C#": 1, "Db": 1, "D": 2, "D#": 3, "Eb": 3, "E": 4, "F": 5, "F#": 6, "Gb": 6,
          "G": 7, "G#": 8, "Ab": 8, "A": 9, "A#": 10, "Bb": 10, "B": 11}
+_NOTE.update({"Cb": 11, "E#": 5, "Fb": 4, "B#": 0})  # enarmônicos aceitos pelo regex
 
 
 @dataclass(frozen=True)
@@ -54,7 +55,8 @@ def find_stems(folder) -> tuple[dict[str, Path], str, int]:
 def tonic_hz(key: str, octave: int = 1) -> float:
     note = key.split()[0]
     midi = 12 * (octave + 1) + _NOTE[note]
-    return 440.0 * 2 ** ((midi - 69) / 12)
+    hz = 440.0 * 2 ** ((midi - 69) / 12)
+    return hz * 2 if hz < 40.0 else hz  # C–D na oitava 1 (32.7–36.7 Hz) são graves demais para o bumbo
 
 
 def deep_merge(base: dict, over: dict) -> dict:

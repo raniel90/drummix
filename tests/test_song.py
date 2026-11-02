@@ -29,8 +29,22 @@ def test_find_stems_requires_kick_and_snare(tmp_path):
 
 def test_tonic_hz():
     assert song.tonic_hz("A minor") == pytest.approx(55.0)
-    assert song.tonic_hz("C major") == pytest.approx(32.70, abs=0.01)
     assert song.tonic_hz("F# minor") == pytest.approx(46.25, abs=0.01)
+    assert song.tonic_hz("E minor") == pytest.approx(41.20, abs=0.01)
+
+
+def test_tonic_hz_below_40_goes_up_an_octave():
+    assert song.tonic_hz("C major") == pytest.approx(65.41, abs=0.01)
+    assert song.tonic_hz("D minor") == pytest.approx(73.42, abs=0.01)
+    assert song.tonic_hz("C# minor") == pytest.approx(69.30, abs=0.01)
+    assert song.tonic_hz("Eb major") == pytest.approx(77.78, abs=0.01)
+
+
+@pytest.mark.parametrize("key, same_as", [("Cb major", "B major"), ("E# minor", "F minor"),
+                                          ("Fb major", "E major"), ("B# minor", "C minor")])
+def test_tonic_hz_accepts_enharmonics(key, same_as):
+    assert song.parse_stem_name(f"S - Audio-Kick-{key}-100bpm-440hz.wav").key == key
+    assert song.tonic_hz(key) == pytest.approx(song.tonic_hz(same_as))
 
 
 def test_deep_merge_overrides_nested_only():
