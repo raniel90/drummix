@@ -41,9 +41,13 @@ def estimate_delay(drums, reference, search_s=(-5.0, 30.0), window_s=15, step_s=
     d, r = onset_envelope(drums), onset_envelope(reference)
     lags = np.arange(int(search_s[0] * FRAME_SR), int(search_s[1] * FRAME_SR) + 1)
     win = int(window_s * FRAME_SR)
+    starts = list(range(int(step_s * FRAME_SR), len(d) - win, int(step_s * FRAME_SR)))
+    if not starts:  # song shorter than step_s + window_s: one central window instead of none
+        win = min(win, len(d) * 3 // 4)
+        starts = [(len(d) - win) // 2]
     found = []
     windows = 0
-    for i0 in range(int(step_s * FRAME_SR), len(d) - win, int(step_s * FRAME_SR)):
+    for i0 in starts:
         seg = d[i0:i0 + win]
         if seg.std() == 0:
             continue

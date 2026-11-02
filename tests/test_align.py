@@ -77,3 +77,11 @@ def test_pick_cluster_majority_wins_over_correlation():
     corrs = np.array([0.2, 0.2, 0.2, 0.9])
     keep = _pick_cluster(lags, corrs, agree_frames=10)
     assert sorted(lags[keep]) == [100.0, 102.0, 104.0]
+
+
+def test_short_song_uses_one_central_window(tmp_path):
+    # 20 s < step_s + window_s do perfil: a grade não cabe, mas a música ainda precisa alinhar
+    drums, ref = _drums_and_reference(tmp_path, delay_s=1.5, seconds=20.0)
+    a = estimate_delay(drums, ref, search_s=(-5.0, 30.0), window_s=15, step_s=20)
+    assert a.delay_s == pytest.approx(1.5, abs=0.01)
+    assert a.windows == 1
