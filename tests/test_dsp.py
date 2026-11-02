@@ -46,5 +46,12 @@ def test_write_drum_midi(tmp_path):
     notes = sorted((n.start, n.pitch, n.velocity) for n in pm.instruments[0].notes)
     assert pm.instruments[0].is_drum
     assert [(p, v) for _, p, v in notes] == [(36, 100), (38, 90), (36, 60)]
-    assert [s for s, _, _ in notes] == pytest.approx([0.5, 0.75, 1.0], abs=0.003)  # MIDI tick quantization
+    assert [s for s, _, _ in notes] == pytest.approx([0.5, 0.75, 1.0], abs=0.001)  # resolução 960 ticks/semínima
     assert pm.get_tempo_changes()[1][0] == pytest.approx(131, abs=0.01)
+
+
+def test_write_drum_midi_keeps_off_grid_timing(tmp_path):
+    times = [0.6123, 1.2345, 1.777, 2.0011, 3.14159]
+    midi.write_drum_midi(tmp_path / "d.mid", {36: [midi.Hit(t, 100) for t in times]}, bpm=131)
+    starts = sorted(n.start for n in pretty_midi.PrettyMIDI(str(tmp_path / "d.mid")).instruments[0].notes)
+    assert starts == pytest.approx(times, abs=0.0003)  # meio tick a 960 ppq e 131 BPM = 0,24 ms

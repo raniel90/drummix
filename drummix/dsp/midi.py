@@ -15,7 +15,7 @@ class Hit:
 
 
 def write_drum_midi(path, hits: dict[int, list[Hit]], bpm: float, note_s: float = 0.1) -> None:
-    pm = pretty_midi.PrettyMIDI(initial_tempo=float(bpm))
+    pm = pretty_midi.PrettyMIDI(resolution=960, initial_tempo=float(bpm))
     kit = pretty_midi.Instrument(program=0, is_drum=True, name="drummix")
     for pitch, items in hits.items():
         for h in items:
