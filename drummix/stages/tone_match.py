@@ -14,7 +14,9 @@ from drummix.dsp.filters import OCTAVES, eq, octave_levels
 def tone_match(stems: dict[str, np.ndarray], reference: np.ndarray, amount: float,
                max_step_db: float = 6.0, max_sub_boost_db: float = 3.0, max_top_cut_db: float = 3.0,
                iterations: int = 3, q: float = 1.41):
-    """max_step_db caps the *accumulated* correction per band (spec §5: ±6 dB)."""
+    """max_step_db caps the *accumulated* correction per band (spec §5: ±6 dB).
+
+    The EQ'd stems replace the entries of `stems` in place; the same dict is returned."""
     ref = octave_levels(reference)
     bus = np.zeros_like(next(iter(stems.values())), dtype=float)
     for v in stems.values():
@@ -38,7 +40,8 @@ def tone_match(stems: dict[str, np.ndarray], reference: np.ndarray, amount: floa
     del cur
     after = octave_levels(eq(bus, bands))  # == the sum of the output stems (linear EQ)
     del bus
-    out = {k: eq(v, bands) for k, v in stems.items()}
+    for k in stems:  # replace entry by entry: never two full sets of stems alive at once
+        stems[k] = eq(stems[k], bands)
     report = {"bands_hz": list(OCTAVES), "reference": ref.round(2).tolist(), "before": before.round(2).tolist(),
               "after": after.round(2).tolist(), "eq_db": total.tolist(), "amount": amount}
-    return out, report
+    return stems, report

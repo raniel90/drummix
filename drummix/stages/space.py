@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import numpy as np
-from scipy.signal import butter, fftconvolve, sosfiltfilt
+from scipy.signal import butter, oaconvolve, sosfiltfilt
 
 from drummix.audio import SR, gain, rms_db
 
@@ -17,8 +17,16 @@ def room_ir(rt60_s: float = 0.45, predelay_ms: float = 10.0, band_hz=(300.0, 600
 
 
 def room(stems: dict[str, np.ndarray], sends: dict[str, float], level_db: float = -15.0, **ir_params) -> np.ndarray:
-    send = sum(w * stems[k] for k, w in sends.items() if k in stems)
+    send = np.zeros_like(next(iter(stems.values())), dtype=float)
+    used = False
+    for k, w in sends.items():
+        if k in stems:
+            send += w * stems[k]
+            used = True
+    if not used:
+        return send  # nothing feeds the room: silence, not a crash
     ir = room_ir(**ir_params)
     n = len(send)
-    wet = np.stack([fftconvolve(send[:, c], ir[:, c])[:n] for c in range(2)], axis=1)
+    # overlap-add: same result as fftconvolve without one FFT the size of the whole song
+    wet = np.stack([oaconvolve(send[:, c], ir[:, c])[:n] for c in range(2)], axis=1)
     return wet * gain(rms_db(send) + level_db - rms_db(wet))

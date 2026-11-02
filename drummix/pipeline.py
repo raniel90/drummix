@@ -10,7 +10,7 @@ from drummix.deliver import deliver
 from drummix.dsp.midi import KICK
 from drummix.song import PIECES, Song, canonical_config, tonic_hz
 from drummix.stages.align import estimate_delay
-from drummix.stages.balance import balance
+from drummix.stages.balance import balance, scale_in_place
 from drummix.stages.band import prepare_band
 from drummix.stages.clean import clean
 from drummix.stages.kick_sample import kick_sample
@@ -34,6 +34,7 @@ def render(song: Song) -> Path:
     original = audio.load(song.original_path)
     m = min(len(band), len(original))
     ref_drums = original[:m] - band[:m]
+    del original  # peak memory: the full-length original is only needed for the reference
 
     alignment = estimate_delay(sum(raw.values()), ref_drums, **p["align"])
     if alignment.spread_s > 0.03 or alignment.mean_corr < 0.1:
@@ -41,25 +42,31 @@ def render(song: Song) -> Path:
                         f"correlação {alignment.mean_corr:.2f}) — confira no ouvido")
 
     stems = clean(raw, p["clean"])
+    raw_kick = raw["kick"]
+    del raw  # only the raw kick is needed from here on
     # detect on the *raw* kick (the cleanup compressor causes false retriggers), but align the sample
     # against the *cleaned* kick: its high-pass shifts phase at the tonic (review of Tasks 2-5)
     sample, kick_hits = kick_sample(stems["kick"], tonic_hz(song.key), reference_db=audio.rms_db(stems["kick"]),
-                                    detect_on=raw["kick"], **p["kick_sample"])
+                                    detect_on=raw_kick, **p["kick_sample"])
+    del raw_kick
     stems["kick_sample"] = sample
     if any(b.time_s - a.time_s < 0.06 for a, b in zip(kick_hits, kick_hits[1:])):
         warnings.append("golpes de bumbo a menos de 60 ms — possível disparo duplo")
 
     stems, tone = tone_match(stems, ref_drums, **p["tone_match"])
+    del ref_drums
     stems["room"] = room(stems, **p["space"])
 
     band_al, overlap = prepare_band(band, alignment.delay_s, n, p["band"]["eq"])
+    del band
     stems, drum_gain = balance(stems, band_al, overlap, p["balance"]["drums_below_band_lu"])
     drums_vs_band = audio.lufs(sum(stems.values())[overlap]) - audio.lufs(band_al[overlap])
     stems["band"] = band_al
 
     premaster = sum(stems.values())
     head = min(0.0, p["mix"]["headroom_peak_db"] - 20 * np.log10(np.max(np.abs(premaster))))
-    stems = {k: v * audio.gain(head) for k, v in stems.items()}
+    del premaster
+    scale_in_place(stems, audio.gain(head))
     final, master_info = master(sum(stems.values()), **p["master"])
 
     report = {"song": song.root.name, "style": song.style, "key": song.key, "bpm": song.bpm,

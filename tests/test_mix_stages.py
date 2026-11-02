@@ -52,3 +52,36 @@ def test_balance_raises_on_silent_drums():
     drums = {"kick": np.zeros((SR * 5, 2))}
     with pytest.raises(ValueError):
         balance(drums, band, slice(0, SR * 5), below_lu=2.0)
+
+
+def test_room_uses_overlap_add_with_same_result_as_fft_convolution(monkeypatch):
+    from scipy.signal import fftconvolve
+
+    from drummix.stages import space
+    rng = np.random.default_rng(4)
+    stems = {"snare": rng.standard_normal((SR // 2, 2)) * 0.1}
+    calls = []
+    real = space.oaconvolve
+    monkeypatch.setattr(space, "oaconvolve", lambda *a, **k: calls.append(1) or real(*a, **k))
+    wet = room(stems, sends={"snare": 1.0}, level_db=-15.0)
+    assert calls
+    ir = space.room_ir()
+    send = stems["snare"]
+    ref = np.stack([fftconvolve(send[:, c], ir[:, c])[:len(send)] for c in range(2)], axis=1)
+    ref *= audio.gain(rms_db(send) - 15.0 - rms_db(ref))
+    assert np.max(np.abs(wet - ref)) < 1e-9
+
+
+def test_room_without_matching_sends_is_silent():
+    stems = {"hihat": _clicks()}
+    wet = room(stems, sends={"snare": 1.0}, level_db=-15.0)
+    assert wet.shape == stems["hihat"].shape and not wet.any()
+
+
+def test_balance_scales_in_place_without_a_second_set_of_stems():
+    rng = np.random.default_rng(0)
+    band = rng.standard_normal((SR * 5, 2)) * 0.1
+    kick = rng.standard_normal((SR * 5, 2)) * 0.01
+    drums = {"kick": kick}
+    out, g = balance(drums, band, slice(0, SR * 5), below_lu=2.0)
+    assert out is drums and out["kick"] is kick

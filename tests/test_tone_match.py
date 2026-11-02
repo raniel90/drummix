@@ -71,3 +71,10 @@ def test_output_stems_get_one_eq_with_accumulated_gains():
     bands = [[f, g, 1.41] for f, g in zip(rep["bands_hz"], rep["eq_db"])]
     assert np.allclose(out["a"], eq(a, bands), atol=1e-6)
     assert np.allclose(out["b"], eq(b, bands), atol=1e-6)
+
+
+def test_replaces_entries_in_the_given_dict():
+    ref = _pink(2)
+    stems = {"a": _pink(1) * 0.5, "b": _pink(3) * 0.5}
+    out, _ = tone_match(stems, ref, amount=0.5)
+    assert out is stems
