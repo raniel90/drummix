@@ -39,3 +39,35 @@ def test_caps_sub_boost_and_top_cut():
     out, rep = tone_match({"a": _pink(1)}, ref, amount=1.0, max_sub_boost_db=3.0, max_top_cut_db=3.0)
     assert rep["eq_db"][0] <= 3.0 + 1e-9
     assert rep["eq_db"][-1] >= -3.0 - 1e-9
+
+
+def test_cumulative_eq_capped_at_max_step():
+    # +18 dB em 1 kHz: cada iteração é limitada, mas o acumulado também precisa ser (spec §5: ±6 dB)
+    ref = eq(_pink(0), [[1000, 18.0, 1.41]])
+    out, rep = tone_match({"a": _pink(1)}, ref, amount=1.0, max_step_db=6.0, iterations=5)
+    assert max(abs(g) for g in rep["eq_db"]) <= 6.0 + 1e-9
+    assert rep["eq_db"][5] == pytest.approx(6.0, abs=1e-9)
+
+
+def test_pinned_top_band_does_not_drag_other_bands():
+    # rosa + branco: a banda de 16 kHz pesa no nível total. A referência é o próprio bus com tudo
+    # acima de 11.3 kHz (só a banda de 16 kHz) 15 dB mais baixo; o corte fica preso em -3 dB e as
+    # demais bandas, idênticas à referência, não podem derivar (antes: até +2.8 dB).
+    w = np.random.default_rng(5).standard_normal(int(4 * SR))
+    x = _pink(1)[:, 0] + 0.3 * w / np.max(np.abs(w))
+    spec = np.fft.rfft(x)
+    spec[np.fft.rfftfreq(len(x), 1 / SR) > 16000 / np.sqrt(2)] *= 10 ** (-15 / 20)
+    y = np.fft.irfft(spec, len(x))
+    bus, ref = np.stack([x, x], 1), np.stack([y, y], 1)
+    out, rep = tone_match({"a": bus * 0.5, "b": bus * 0.5}, ref, amount=1.0, max_top_cut_db=3.0, iterations=5)
+    assert rep["eq_db"][-1] == pytest.approx(-3.0, abs=1e-9)
+    assert max(abs(g) for g in rep["eq_db"][:-1]) < 0.5
+
+
+def test_output_stems_get_one_eq_with_accumulated_gains():
+    ref = eq(_pink(0), [[250, 4.0, 1.41], [4000, -4.0, 1.41]])
+    a, b = _pink(1), _pink(2)
+    out, rep = tone_match({"a": a, "b": b}, ref, amount=1.0)
+    bands = [[f, g, 1.41] for f, g in zip(rep["bands_hz"], rep["eq_db"])]
+    assert np.allclose(out["a"], eq(a, bands), atol=1e-6)
+    assert np.allclose(out["b"], eq(b, bands), atol=1e-6)
