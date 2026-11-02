@@ -71,3 +71,22 @@ def test_same_config_and_identical_final_is_allowed(tmp_path):
     kw = dict(hits={}, bpm=120, report={}, targets={"target_lufs": None, "ceiling_dbtp": 0.0})
     deliver.deliver(tmp_path, stems, _final(stems), config_text="a: 1", **kw)
     assert deliver.deliver(tmp_path, stems, _final(stems), config_text="a: 1", **kw).name == "v2"
+
+
+def test_stem_length_must_match_final(tmp_path):
+    stems = _stems()
+    final = _final(stems)
+    stems["kick"] = stems["kick"][:-10]
+    with pytest.raises(deliver.DeliveryError, match="kick"):
+        deliver.deliver(tmp_path, stems, final, {}, bpm=120, report={},
+                        targets={"target_lufs": None, "ceiling_dbtp": 0.0}, config_text="a: 1")
+    assert not (tmp_path / "v1").exists() and not (tmp_path / "v1.tmp").exists()
+
+
+def test_report_md_says_drums_vs_band_is_measured_at_the_premaster(tmp_path):
+    stems = _stems()
+    v = deliver.deliver(tmp_path, stems, _final(stems), {}, bpm=120, report={"drums_vs_band_lu": -2.0},
+                        targets={"target_lufs": None, "ceiling_dbtp": 0.0}, config_text="a: 1")
+    md = (v / "report.md").read_text()
+    line = next(ln for ln in md.splitlines() if "drums_vs_band_lu" in ln)
+    assert "premaster" in line

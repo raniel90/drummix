@@ -28,11 +28,15 @@ def _previous_report(out_dir: Path) -> dict | None:
     return json.loads(path.read_text()) if path.exists() else None
 
 
+_NOTES = {"drums_vs_band_lu": "medido no premaster (antes do master), onde bateria e banda tocam juntas"}
+
+
 def _report_md(rep: dict) -> str:
     lines = [f"# drummix — v{rep['version']}", ""]
     for key in ("final_lufs", "final_true_peak_db", "drums_vs_band_lu", "delay_s", "kick_hits"):
         if key in rep:
-            lines.append(f"- **{key}**: {rep[key]}")
+            note = f" — {_NOTES[key]}" if key in _NOTES else ""
+            lines.append(f"- **{key}**: {rep[key]}{note}")
     if rep.get("warnings"):
         lines += ["", "## Avisos", *[f"- {w}" for w in rep["warnings"]]]
     return "\n".join(lines) + "\n"
@@ -41,6 +45,9 @@ def _report_md(rep: dict) -> str:
 def deliver(out_dir, stems: dict[str, np.ndarray], final: np.ndarray, hits: dict[int, list[Hit]], bpm: float,
             report: dict, targets: dict, config_text: str) -> Path:
     """config_text is the canonical render config (song.canonical_config), not the raw song.yaml."""
+    bad = [f"{k} ({len(v)})" for k, v in stems.items() if len(v) != len(final)]
+    if bad:
+        raise DeliveryError(f"stems com comprimento diferente do final ({len(final)}): {', '.join(bad)}")
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     version = (_versions(out_dir) or [0])[-1] + 1

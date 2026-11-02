@@ -32,3 +32,30 @@ def test_non_wav_inputs_are_decoded(tmp_path):
     audio.run(["ffmpeg", "-v", "error", "-y", "-i", str(info["band"]), str(mp3)])
     root = ingest.create_song(tmp_path / "songs", "s", info["stems_dir"], mp3, info["original"], style="fusion")
     assert audio.load(root / "input" / "band.wav").shape[1] == 2
+
+
+def test_wav_with_wrong_sample_rate_is_refused_up_front(tmp_path):
+    import numpy as np
+    import soundfile as sf
+    info = make_song(tmp_path / "src", seconds=8.0)
+    band48 = tmp_path / "band48.wav"
+    sf.write(band48, np.zeros((48000, 2)), 48000)
+    with pytest.raises(ValueError, match="band48.wav"):
+        ingest.create_song(tmp_path / "songs", "s", info["stems_dir"], band48, info["original"], style="fusion")
+    assert not (tmp_path / "songs" / "s").exists()
+
+
+def test_missing_take_leaves_no_song_folder(tmp_path):
+    info = make_song(tmp_path / "src", seconds=8.0)
+    with pytest.raises(FileNotFoundError, match="take.mov"):
+        ingest.create_song(tmp_path / "songs", "s", info["stems_dir"], info["band"], info["original"],
+                           style="fusion", take=tmp_path / "take.mov")
+    assert not (tmp_path / "songs" / "s").exists()
+
+
+def test_missing_band_leaves_no_song_folder(tmp_path):
+    info = make_song(tmp_path / "src", seconds=8.0)
+    with pytest.raises(FileNotFoundError):
+        ingest.create_song(tmp_path / "songs", "s", info["stems_dir"], tmp_path / "nada.wav", info["original"],
+                           style="fusion")
+    assert not (tmp_path / "songs" / "s").exists()
