@@ -1485,6 +1485,8 @@ from drummix.audio import gain, lufs
 def balance(drums: dict[str, np.ndarray], band: np.ndarray, overlap: slice, below_lu: float):
     bus = sum(drums.values())
     g = (lufs(band[overlap]) - below_lu) - lufs(bus[overlap])
+    if not np.isfinite(g):
+        raise ValueError("bateria ou banda em silêncio na região comum — não dá para equilibrar")
     return {k: v * gain(g) for k, v in drums.items()}, float(g)
 ```
 
@@ -2051,7 +2053,8 @@ def render(song: Song) -> Path:
                         f"correlação {alignment.mean_corr:.2f}) — confira no ouvido")
 
     stems = clean(raw, p["clean"])
-    sample, kick_hits = kick_sample(raw["kick"], tonic_hz(song.key), reference_db=audio.rms_db(stems["kick"]),
+    # align against the *cleaned* kick: its high-pass shifts phase at the tonic (review of Tasks 2-5)
+    sample, kick_hits = kick_sample(stems["kick"], tonic_hz(song.key), reference_db=audio.rms_db(stems["kick"]),
                                     **p["kick_sample"])
     stems["kick_sample"] = sample
     if any(b.time_s - a.time_s < 0.06 for a, b in zip(kick_hits, kick_hits[1:])):
