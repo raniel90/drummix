@@ -17,8 +17,8 @@ def test_hits_loudness_and_true_peak():
     y, info = master(_music(), target_lufs=-14.0, ceiling_dbtp=-1.0, tolerance_lu=0.3,
                      glue={"threshold_db": -24, "ratio": 2.5, "attack_ms": 30, "release_ms": 150})
     assert audio.lufs(y) == pytest.approx(-14.0, abs=0.3)
-    assert audio.true_peak_db(y) <= -1.0 + 0.05
-    assert info["true_peak_db"] <= -0.95
+    assert audio.true_peak_db(y) <= -1.0
+    assert info["true_peak_db"] <= -1.0
 
 
 def test_keeps_time_alignment():
@@ -32,3 +32,10 @@ def test_keeps_time_alignment():
 def test_raises_if_target_unreachable():
     with pytest.raises(MasterError):
         master(np.zeros((SR * 2, 2)), target_lufs=-14.0, ceiling_dbtp=-1.0, tolerance_lu=0.3, glue=None)
+
+
+def test_true_peak_check_is_strict(monkeypatch):
+    from drummix.stages import master as m
+    monkeypatch.setattr(m, "true_peak_db", lambda y: -0.99)
+    with pytest.raises(MasterError, match="true peak"):
+        master(_music(), target_lufs=-14.0, ceiling_dbtp=-1.0, tolerance_lu=0.3, glue=None)

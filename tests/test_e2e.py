@@ -16,7 +16,7 @@ def test_new_then_render_twice(tmp_path, capsys):
     rep = json.loads((v1 / "report.json").read_text())
     assert rep["delay_s"] == pytest.approx(1.5, abs=0.01)
     assert rep["final_lufs"] == pytest.approx(-14.0, abs=0.3)
-    assert rep["final_true_peak_db"] <= -0.95
+    assert rep["final_true_peak_db"] <= -1.0
     assert rep["drums_vs_band_lu"] == pytest.approx(-2.0, abs=0.5)
     assert rep["kick_hits"] == len(info["kick_times"])
     assert {"kick", "kick_sample", "snare", "room", "band"} <= {p.stem for p in (v1 / "stems").iterdir()}

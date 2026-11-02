@@ -24,5 +24,5 @@ def test_hornet_matches_manual_session(tmp_path):
     assert rep["delay_s"] == pytest.approx(11.73, abs=0.03)
     assert 490 <= rep["kick_hits"] <= 600  # sessão manual: 544
     assert rep["final_lufs"] == pytest.approx(-14.0, abs=0.3)
-    assert rep["final_true_peak_db"] <= -0.95
+    assert rep["final_true_peak_db"] <= -1.0
     assert rep["drums_vs_band_lu"] == pytest.approx(-2.0, abs=0.5)

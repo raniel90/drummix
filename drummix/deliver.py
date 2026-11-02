@@ -59,7 +59,7 @@ def deliver(out_dir, stems: dict[str, np.ndarray], final: np.ndarray, hits: dict
         level, tp = audio.lufs(written), audio.true_peak_db(written)
         if targets.get("target_lufs") is not None and abs(level - targets["target_lufs"]) > 0.5:
             raise DeliveryError(f"final em {level:.2f} LUFS, alvo {targets['target_lufs']}")
-        if tp > targets["ceiling_dbtp"] + 0.1:
+        if tp > targets["ceiling_dbtp"] + 0.005:
             raise DeliveryError(f"true peak {tp:.2f} dBTP acima de {targets['ceiling_dbtp']}")
         if hits:
             write_drum_midi(tmp / "drums.mid", hits, bpm)

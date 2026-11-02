@@ -56,3 +56,11 @@ def test_failed_check_leaves_no_version(tmp_path):
         deliver.deliver(tmp_path, stems, _final(stems), {}, bpm=120, report={},
                         targets={"target_lufs": -14.0, "ceiling_dbtp": -1.0}, config_text="a: 1")
     assert not (tmp_path / "v1").exists() and not (tmp_path / "v1.tmp").exists()
+
+
+def test_true_peak_over_ceiling_is_strict(tmp_path, monkeypatch):
+    stems = _stems()
+    monkeypatch.setattr(deliver.audio, "true_peak_db", lambda x: 0.01)
+    with pytest.raises(deliver.DeliveryError, match="true peak"):
+        deliver.deliver(tmp_path, stems, _final(stems), {}, bpm=120, report={},
+                        targets={"target_lufs": None, "ceiling_dbtp": 0.0}, config_text="a: 1")
