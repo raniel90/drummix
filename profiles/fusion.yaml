@@ -1,0 +1,63 @@
+# Jazz fusion — validado de ouvido em The Hornet (Yellowjackets), 2026-10-31.
+# Bumbo contido: +2 dB soou "muito pesado". Caixa +2 dB aprovada.
+ingest:
+  silent_below_lufs: -60
+align:
+  search_s: [-5.0, 30.0]
+  window_s: 15
+  step_s: 20
+clean:
+  kick:
+    mono: true
+    highpass_hz: 30
+    eq: [[400, -4.0, 1.2], [900, -2.0, 1.5]]
+    compressor: {threshold_db: -24, ratio: 4, attack_ms: 15, release_ms: 120}
+  snare:
+    highpass_hz: 100
+    eq: [[500, -2.5, 1.2], [1200, -2.0, 1.5]]
+    compressor: {threshold_db: -26, ratio: 3, attack_ms: 10, release_ms: 100}
+    gain_db: 2.0
+  toms:
+    gate: {threshold_db: -36.5, ratio: 6, attack_ms: 1, release_ms: 200}
+    highpass_hz: 60
+    eq: [[500, -3.0, 1.2]]
+    compressor: {threshold_db: -22, ratio: 3, attack_ms: 15, release_ms: 150}
+    gain_db: -1.0
+  hihat:
+    highpass_hz: 250
+    eq: [[1000, -2.0, 1.2]]
+    width: 0.55
+    gain_db: -1.0
+  cymbals:
+    highpass_hz: 200
+    eq: [[800, -2.0, 1.0]]
+  other:
+    drop: true
+  other_kit:
+    highpass_hz: 100
+    gain_db: -6.0
+kick_sample:
+  level_db: -9.0
+  sweep_from_hz: 160
+  decay_s: 0.11
+  click: 0.25
+tone_match:
+  amount: 0.65
+  max_sub_boost_db: 3.0
+  max_top_cut_db: 3.0
+space:
+  sends: {snare: 1.0, toms: 1.0, cymbals: 0.5, kick: 0.3}
+  level_db: -15.0
+  rt60_s: 0.45
+  predelay_ms: 10
+band:
+  eq: [[55, -1.5, 4.0], [4000, -1.5, 2.0]]
+balance:
+  drums_below_band_lu: 2.0
+mix:
+  headroom_peak_db: -3.0
+master:
+  target_lufs: -14.0
+  ceiling_dbtp: -1.0
+  tolerance_lu: 0.3
+  glue: {threshold_db: -24, ratio: 2.5, attack_ms: 30, release_ms: 150}
