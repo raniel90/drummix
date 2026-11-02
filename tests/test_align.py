@@ -16,10 +16,19 @@ def _drums_and_reference(tmp_path, delay_s, seconds=60.0):
 
 def test_recovers_known_delay(tmp_path):
     drums, ref = _drums_and_reference(tmp_path, delay_s=2.37)
-    a = estimate_delay(drums, ref, search_s=(1.9, 2.9), window_s=10, step_s=8)
+    a = estimate_delay(drums, ref, search_s=(-1.0, 5.0), window_s=10, step_s=8)
     assert a.delay_s == pytest.approx(2.37, abs=0.01)
     assert a.spread_s < 0.01
     assert a.used >= 3
+
+
+@pytest.mark.parametrize("delay_s", [0.4, 11.73])
+def test_recovers_delay_over_wide_search(tmp_path, delay_s):
+    drums, ref = _drums_and_reference(tmp_path, delay_s=delay_s, seconds=60.0)
+    a = estimate_delay(drums, ref, search_s=(-5.0, 30.0))
+    assert a.delay_s == pytest.approx(delay_s, abs=0.01)
+    assert a.spread_s < 0.01
+    assert a.used >= 2
 
 
 def test_raises_when_nothing_correlates():
