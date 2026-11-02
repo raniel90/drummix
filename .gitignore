@@ -1,0 +1,6 @@
+songs/*/input/
+songs/*/output/
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
