@@ -64,3 +64,10 @@ def test_true_peak_over_ceiling_is_strict(tmp_path, monkeypatch):
     with pytest.raises(deliver.DeliveryError, match="true peak"):
         deliver.deliver(tmp_path, stems, _final(stems), {}, bpm=120, report={},
                         targets={"target_lufs": None, "ceiling_dbtp": 0.0}, config_text="a: 1")
+
+
+def test_same_config_and_identical_final_is_allowed(tmp_path):
+    stems = _stems()
+    kw = dict(hits={}, bpm=120, report={}, targets={"target_lufs": None, "ceiling_dbtp": 0.0})
+    deliver.deliver(tmp_path, stems, _final(stems), config_text="a: 1", **kw)
+    assert deliver.deliver(tmp_path, stems, _final(stems), config_text="a: 1", **kw).name == "v2"

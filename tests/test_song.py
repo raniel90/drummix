@@ -68,3 +68,27 @@ def test_load_song_applies_profile_then_overrides(tmp_path):
     assert (s.key, s.bpm, s.style) == ("A minor", 131, "fusion")
     assert s.stem_path("kick") == root / "input" / "stems" / "kick.wav"
     assert s.band_path == root / "input" / "band.wav"
+
+
+def _song_dir(tmp_path, profile: dict, cfg_text: str):
+    profiles = tmp_path / "profiles"
+    profiles.mkdir(exist_ok=True)
+    (profiles / "fusion.yaml").write_text(yaml.safe_dump(profile))
+    root = tmp_path / "songs" / "s"
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "song.yaml").write_text(cfg_text)
+    return root, profiles
+
+
+def test_canonical_config_ignores_comments_and_formatting(tmp_path):
+    root, profiles = _song_dir(tmp_path, {"x": 1}, "style: fusion\nkey: A minor\nbpm: 131\nparams: {}\n")
+    a = song.canonical_config(song.load_song(root, profiles_dir=profiles))
+    (root / "song.yaml").write_text("# comentário\nstyle: fusion\nbpm: 131\nkey: A minor   # tom\nparams: {}\n")
+    assert song.canonical_config(song.load_song(root, profiles_dir=profiles)) == a
+
+
+def test_canonical_config_sees_profile_changes(tmp_path):
+    root, profiles = _song_dir(tmp_path, {"x": 1}, "style: fusion\nkey: A minor\nbpm: 131\nparams: {}\n")
+    a = song.canonical_config(song.load_song(root, profiles_dir=profiles))
+    (profiles / "fusion.yaml").write_text(yaml.safe_dump({"x": 2}))
+    assert song.canonical_config(song.load_song(root, profiles_dir=profiles)) != a

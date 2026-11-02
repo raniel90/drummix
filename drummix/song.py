@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -106,3 +107,9 @@ def load_song(root, profiles_dir=PROFILES_DIR) -> Song:
     cfg = yaml.safe_load((root / "song.yaml").read_text())
     profile = yaml.safe_load((Path(profiles_dir) / f"{cfg['style']}.yaml").read_text())
     return Song(root, cfg["style"], cfg["key"], int(cfg["bpm"]), deep_merge(profile, cfg.get("params") or {}))
+
+
+def canonical_config(song: Song) -> str:
+    """What actually drives a render (profile + overrides already merged), independent of YAML
+    formatting and comments: the 'config changed but final identical' guard hashes this."""
+    return json.dumps({"style": song.style, "key": song.key, "bpm": song.bpm, "params": song.params}, sort_keys=True)

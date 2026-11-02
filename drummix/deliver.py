@@ -40,6 +40,7 @@ def _report_md(rep: dict) -> str:
 
 def deliver(out_dir, stems: dict[str, np.ndarray], final: np.ndarray, hits: dict[int, list[Hit]], bpm: float,
             report: dict, targets: dict, config_text: str) -> Path:
+    """config_text is the canonical render config (song.canonical_config), not the raw song.yaml."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     version = (_versions(out_dir) or [0])[-1] + 1

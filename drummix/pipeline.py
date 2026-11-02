@@ -8,7 +8,7 @@ import numpy as np
 from drummix import audio
 from drummix.deliver import deliver
 from drummix.dsp.midi import KICK
-from drummix.song import PIECES, Song, tonic_hz
+from drummix.song import PIECES, Song, canonical_config, tonic_hz
 from drummix.stages.align import estimate_delay
 from drummix.stages.balance import balance
 from drummix.stages.band import prepare_band
@@ -69,4 +69,4 @@ def render(song: Song) -> Path:
               "headroom_db": round(head, 2), "tone_match": tone, "master": master_info, "warnings": warnings}
     targets = {"target_lufs": p["master"]["target_lufs"], "ceiling_dbtp": p["master"]["ceiling_dbtp"]}
     return deliver(song.output_dir, stems, final, {KICK: kick_hits}, song.bpm, report, targets,
-                   config_text=song.config_path.read_text())
+                   config_text=canonical_config(song))
