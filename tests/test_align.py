@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from drummix import audio, song
-from drummix.stages.align import AlignError, estimate_delay
+from drummix.stages.align import AlignError, _pick_cluster, estimate_delay
 from tests.synth import make_song
 
 
@@ -27,3 +27,44 @@ def test_raises_when_nothing_correlates():
     noise = rng.standard_normal((audio.SR * 40, 2)) * 1e-9
     with pytest.raises(AlignError):
         estimate_delay(noise, noise * 0, search_s=(0, 2), window_s=10, step_s=8)
+
+
+def _clicks(times, n):
+    x = np.zeros(n)
+    burst = np.random.default_rng(7).standard_normal(int(0.02 * audio.SR)) * np.exp(-np.arange(int(0.02 * audio.SR)) / 200)
+    for t in times:
+        i = int(round(t * audio.SR))
+        if 0 <= i and i + len(burst) <= n:
+            x[i:i + len(burst)] += burst
+    return np.stack([x, x], 1)
+
+
+def test_disagreeing_windows_use_majority_cluster():
+    # 6 janelas: 3 com atraso 1.0 s, 2 com 2.0 s, 1 com 3.0 s -> mediana 1.5 s cai entre grupos
+    rng = np.random.default_rng(3)
+    n = 80 * audio.SR
+    seg_lag = {1: 1.0, 2: 1.0, 3: 1.0, 4: 2.0, 5: 2.0, 6: 3.0}
+    drum_t, ref_t = [], []
+    for k in range(8):
+        ts = np.sort(rng.uniform(10 * k, 10 * k + 10, 25))
+        drum_t += list(ts)
+        ref_t += list(ts - seg_lag.get(k, 0.0))
+    a = estimate_delay(_clicks(drum_t, n), _clicks(ref_t, n), search_s=(-1, 4), window_s=10, step_s=10)
+    assert np.isfinite(a.delay_s)
+    assert a.delay_s == pytest.approx(1.0, abs=0.01)
+    assert a.used == 3
+    assert a.windows == 6
+
+
+def test_pick_cluster_tie_prefers_higher_correlation():
+    lags = np.array([100.0, 300.0, 101.0, 301.0])
+    corrs = np.array([0.3, 0.6, 0.3, 0.6])
+    keep = _pick_cluster(lags, corrs, agree_frames=10)
+    assert sorted(lags[keep]) == [300.0, 301.0]
+
+
+def test_pick_cluster_majority_wins_over_correlation():
+    lags = np.array([100.0, 102.0, 104.0, 500.0])
+    corrs = np.array([0.2, 0.2, 0.2, 0.9])
+    keep = _pick_cluster(lags, corrs, agree_frames=10)
+    assert sorted(lags[keep]) == [100.0, 102.0, 104.0]

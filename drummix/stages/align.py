@@ -67,9 +67,19 @@ def estimate_delay(drums, reference, search_s=(-5.0, 30.0), window_s=15, step_s=
         raise AlignError("nenhuma janela correlacionou bateria e referência")
     corr = np.array([c for c, _ in found])
     lag = np.array([l for _, l in found], dtype=float)
-    med = np.median(lag)
-    keep = np.abs(lag - med) <= agree_s * FRAME_SR
+    keep = _pick_cluster(lag, corr, agree_s * FRAME_SR)
     return Alignment(delay_s=float(np.median(lag[keep]) / FRAME_SR),
                      spread_s=float(np.std(lag[keep]) / FRAME_SR),
                      mean_corr=float(corr[keep].mean()),
-                     windows=windows, used=int(keep.sum()))
+                     windows=windows, used=int(keep.size))
+
+
+def _pick_cluster(lags: np.ndarray, corrs: np.ndarray, agree_frames: float) -> np.ndarray:
+    """Indices of the largest group of window lags that chain within agree_frames of each other.
+
+    Ties go to the group with the higher mean correlation. Never empty for non-empty input.
+    """
+    order = np.argsort(lags, kind="stable")
+    splits = np.flatnonzero(np.diff(lags[order]) > agree_frames) + 1
+    clusters = np.split(order, splits)
+    return max(clusters, key=lambda idx: (idx.size, float(corrs[idx].mean())))
